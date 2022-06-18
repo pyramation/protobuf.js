@@ -371,6 +371,7 @@ function parse(source, root, options) {
         if (!nameRe.test(name))
             throw illegal(name, "name");
 
+        var orig = name;
         name = applyCase(name);
         skip("=");
 
@@ -397,6 +398,10 @@ function parse(source, root, options) {
         } else {
             parent.add(field);
         }
+
+        field.setOption('(telescope:name)', name, name);
+        field.setOption('(telescope:orig)', orig, orig);
+        field.setOption('(telescope:camel)', util.camelCase(orig), util.camelCase(orig));
 
         // JSON defaults to packed=true if not set so we have to set packed=false explicity when
         // parsing proto2 descriptors without the option, where applicable. This must be done for

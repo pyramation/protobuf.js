@@ -1,5 +1,5 @@
 {
-  "name": "protobufjs",
+  "name": "@pyramation/protobufjs",
   "version": "6.11.3",
   "versionScheme": "~",
   "description": "Protocol Buffers for JavaScript (& TypeScript).",
