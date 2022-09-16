@@ -479,8 +479,10 @@ function parse(source, root, options) {
         if (!nameRe.test(name))
             throw illegal(name, "name");
 
+        var orig = name;
+        name = applyCase(name);
         skip("=");
-        var field = new MapField(applyCase(name), parseId(next()), keyType, valueType);
+        var field = new MapField(name, parseId(next()), keyType, valueType);
         ifBlock(field, function parseMapField_block(token) {
 
             /* istanbul ignore else */
@@ -493,6 +495,11 @@ function parse(source, root, options) {
         }, function parseMapField_line() {
             parseInlineOptions(field);
         });
+        
+        field.setOption('(telescope:name)', name, name);
+        field.setOption('(telescope:orig)', orig, orig);
+        field.setOption('(telescope:camel)', util.camelCase(orig), util.camelCase(orig));
+
         parent.add(field);
     }
 
