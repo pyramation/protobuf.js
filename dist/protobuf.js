@@ -1,6 +1,6 @@
 /*!
- * protobuf.js v6.11.0 (c) 2016, daniel wirtz
- * compiled thu, 29 apr 2021 02:20:44 utc
+ * protobuf.js v6.11.4 (c) 2016, daniel wirtz
+ * compiled fri, 16 sep 2022 21:14:49 utc
  * licensed under the bsd-3-clause license
  * see: https://github.com/dcodeio/protobuf.js for details
  */
@@ -2300,13 +2300,13 @@ function Field(name, id, type, rule, extend, options, comment) {
     if (extend !== undefined && !util.isString(extend))
         throw TypeError("extend must be a string");
 
+    if (rule === "proto3_optional") {
+        rule = "optional";
+    }
     /**
      * Field rule, if any.
      * @type {string|undefined}
      */
-    if (rule === "proto3_optional") {
-        rule = "optional";
-    }
     this.rule = rule && rule !== "optional" ? rule : undefined; // toJSON
 
     /**
@@ -3192,6 +3192,7 @@ var ReflectionObject = require(24);
 ((Namespace.prototype = Object.create(ReflectionObject.prototype)).constructor = Namespace).className = "Namespace";
 
 var Field    = require(16),
+    OneOf    = require(25),
     util     = require(37);
 
 var Type,    // cyclic
@@ -3403,7 +3404,7 @@ Namespace.prototype.getEnum = function getEnum(name) {
  */
 Namespace.prototype.add = function add(object) {
 
-    if (!(object instanceof Field && object.extend !== undefined || object instanceof Type || object instanceof Enum || object instanceof Service || object instanceof Namespace))
+    if (!(object instanceof Field && object.extend !== undefined || object instanceof Type || object instanceof Enum || object instanceof Service || object instanceof Namespace || object instanceof OneOf))
         throw TypeError("object must be a valid nested object");
 
     if (!this.nested)
@@ -3618,7 +3619,7 @@ Namespace._configure = function(Type_, Service_, Enum_) {
     Enum    = Enum_;
 };
 
-},{"16":16,"24":24,"37":37}],24:[function(require,module,exports){
+},{"16":16,"24":24,"25":25,"37":37}],24:[function(require,module,exports){
 "use strict";
 module.exports = ReflectionObject;
 
@@ -4442,6 +4443,7 @@ function parse(source, root, options) {
         if (!nameRe.test(name))
             throw illegal(name, "name");
 
+        var orig = name;
         name = applyCase(name);
         skip("=");
 
@@ -4468,6 +4470,10 @@ function parse(source, root, options) {
         } else {
             parent.add(field);
         }
+
+        field.setOption('(telescope:name)', name, name);
+        field.setOption('(telescope:orig)', orig, orig);
+        field.setOption('(telescope:camel)', util.camelCase(orig), util.camelCase(orig));
 
         // JSON defaults to packed=true if not set so we have to set packed=false explicity when
         // parsing proto2 descriptors without the option, where applicable. This must be done for
@@ -4545,8 +4551,10 @@ function parse(source, root, options) {
         if (!nameRe.test(name))
             throw illegal(name, "name");
 
+        var orig = name;
+        name = applyCase(name);
         skip("=");
-        var field = new MapField(applyCase(name), parseId(next()), keyType, valueType);
+        var field = new MapField(name, parseId(next()), keyType, valueType);
         ifBlock(field, function parseMapField_block(token) {
 
             /* istanbul ignore else */
@@ -4559,6 +4567,11 @@ function parse(source, root, options) {
         }, function parseMapField_line() {
             parseInlineOptions(field);
         });
+        
+        field.setOption('(telescope:name)', name, name);
+        field.setOption('(telescope:orig)', orig, orig);
+        field.setOption('(telescope:camel)', util.camelCase(orig), util.camelCase(orig));
+
         parent.add(field);
     }
 
@@ -7465,6 +7478,9 @@ util.decorateEnum = function decorateEnum(object) {
 util.setProperty = function setProperty(dst, path, value) {
     function setProp(dst, path, value) {
         var part = path.shift();
+        if (part === "__proto__") {
+          return dst;
+        }
         if (path.length > 0) {
             dst[part] = setProp(dst[part] || {}, path, value);
         } else {
